@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+IP_ADDRESS=$(hostname -i)
+
 [ -d /dev/net ] ||
     mkdir -p /dev/net
 [ -c /dev/net/tun ] ||
@@ -30,6 +32,7 @@ dh dh.pem
 keepalive 10 60
 persist-key
 persist-tun
+push "dhcp-option DNS ${IP_ADDRESS}"
 push "dhcp-option DNS 8.8.8.8"
 push "dhcp-option DNS 8.8.4.4"
 
@@ -37,26 +40,6 @@ proto tcp-server
 port 443
 dev tun443
 status openvpn-status-443.log
-EOF
-
-[ -f udp1194.conf ] || cat >udp1194.conf <<EOF
-server 192.168.255.128 255.255.255.128
-verb 3
-duplicate-cn
-key key.pem
-ca cert.pem
-cert cert.pem
-dh dh.pem
-keepalive 10 60
-persist-key
-persist-tun
-push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 8.8.4.4"
-
-proto udp
-port 1194
-dev tun1194
-status openvpn-status-1194.log
 EOF
 
 MY_IP_ADDR=$(curl -s http://myip.enix.org/REMOTE_ADDR)
@@ -100,7 +83,6 @@ EOF
 
 iptables -t nat -A POSTROUTING -s 192.168.255.0/24 -o eth0 -j MASQUERADE
 
-touch tcp443.log udp1194.log http8080.log
+touch tcp443.log http8080.log
 while true ; do openvpn tcp443.conf ; done >> tcp443.log &
-while true ; do openvpn udp1194.conf ; done >> udp1194.log &
 tail -F *.log
