@@ -1,8 +1,14 @@
-FROM ubuntu
+FROM alpine:3.2
 
-RUN apt-get update -q
-RUN apt-get install -qy openvpn iptables socat curl
-ADD ./bin /usr/local/sbin
-VOLUME /etc/openvpn
-EXPOSE 443/tcp 8080/tcp
-CMD run
+MAINTAINER SequenceIQ <info@sequenceiq.com>
+
+#http://wiki.alpinelinux.org/wiki/Setting_up_a_OpenVPN_server
+RUN apk update && apk add openvpn openssl curl
+
+RUN mkdir /etc/openvpn/certs
+
+VOLUME /etc/openvpn/certs
+
+ADD script/bootstrap.sh /bootstrap.sh
+
+ENTRYPOINT ["/bootstrap.sh"]

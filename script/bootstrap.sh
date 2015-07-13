@@ -1,16 +1,9 @@
 #!/bin/sh
-set -e
 
 IP_ADDRESS=$(hostname -i)
 
-[ -d /dev/net ] ||
-    mkdir -p /dev/net
-[ -c /dev/net/tun ] ||
-    mknod /dev/net/tun c 10 200
+cd /etc/openvpn/certs
 
-cd /etc/openvpn
-# This file tells `serveconfig` that there is a config there
-touch placeholder
 [ -f dh.pem ] ||
     openssl dhparam -out dh.pem 1024
 [ -f key.pem ] ||
@@ -21,14 +14,14 @@ chmod 600 key.pem
 [ -f cert.pem ] ||
     openssl x509 -req -in csr.pem -out cert.pem -signkey key.pem -days 24855
 
-[ -f tcp443.conf ] || cat >tcp443.conf <<EOF
+[ -f tcp443.conf ] || cat > tcp443.conf <<EOF
 server 192.168.255.0 255.255.255.128
 verb 3
 duplicate-cn
-key key.pem
-ca cert.pem
-cert cert.pem
-dh dh.pem
+key /etc/openvpn/certs/key.pem
+ca /etc/openvpn/certs/cert.pem
+cert /etc/openvpn/certs/cert.pem
+dh /etc/openvpn/certs/dh.pem
 keepalive 10 60
 persist-key
 persist-tun
@@ -49,23 +42,23 @@ MY_IP_ADDR=$(curl -s http://myip.enix.org/REMOTE_ADDR)
     exit 1
 }
 
-[ -f client.ovpn ] || cat >client.ovpn <<EOF
+[ -f client.ovpn ] || cat > client.ovpn <<EOF
 client
 nobind
 dev tun
 route 10.0.0.0 255.255.255.0
 
 <key>
-`cat key.pem`
+`cat /etc/openvpn/certs/key.pem`
 </key>
 <cert>
-`cat cert.pem`
+`cat /etc/openvpn/certs/cert.pem`
 </cert>
 <ca>
-`cat cert.pem`
+`cat /etc/openvpn/certs/cert.pem`
 </ca>
 <dh>
-`cat dh.pem`
+`cat /etc/openvpn/certs/dh.pem`
 </dh>
 
 <connection>
@@ -73,16 +66,9 @@ remote $MY_IP_ADDR 443 tcp-client
 </connection>
 EOF
 
-[ -f client.http ] || cat >client.http <<EOF
-HTTP/1.0 200 OK
-Content-Type: application/x-openvpn-profile
-Content-Length: `wc -c client.ovpn`
-
-`cat client.ovpn`
-EOF
 
 iptables -t nat -A POSTROUTING -s 192.168.255.0/24 -o eth0 -j MASQUERADE
 
-touch tcp443.log http8080.log
+touch tcp443.log
 while true ; do openvpn tcp443.conf ; done >> tcp443.log &
 tail -F *.log
