@@ -1,6 +1,6 @@
 #!/bin/sh
 
-IP_ADDRESS=$(hostname -i)
+IP_ADDRESS=$(ip addr show eth0 | grep "inet\b" | awk '{print $2}' | cut -d/ -f1)
 
 cd /etc/openvpn/certs
 
@@ -46,7 +46,7 @@ MY_IP_ADDR=$(curl -s http://myip.enix.org/REMOTE_ADDR)
 client
 nobind
 dev tun
-route 10.0.0.0 255.255.255.0
+route 10.0.0.0 255.255.0.0
 
 <key>
 `cat /etc/openvpn/certs/key.pem`
