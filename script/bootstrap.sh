@@ -27,7 +27,8 @@ persist-key
 persist-tun
 push "dhcp-option DNS ${IP_ADDRESS}"
 push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 8.8.4.4"
+push "dhcp-option DOMAIN service.consul"
+push "dhcp-option DOMAIN node.dc1.consul"
 
 proto tcp-server
 port 443
